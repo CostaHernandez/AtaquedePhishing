@@ -105,3 +105,11 @@ code{background:#f1f3f4;padding:0 4px;border-radius:3px}
 .ctl{display:block;padding:6px 0;cursor:pointer}.ctl small{color:var(--mut);display:block;margin-left:24px}
 .proj{background:#f1f8f7;border:1px solid #b9ded9;border-radius:8px;padding:12px;margin-top:8px}
 @media(max-width:800px){.brow{grid-template-columns:80px 1fr 100px;font-size:12px}}
+
+/* ===== Entrenamiento anti-phishing ===== */
+.top{border-bottom:3px solid #ef4444}
+.mission{background:linear-gradient(135deg,#0b2545,#12486b);color:#fff;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.mission b{display:block}.mission span{opacity:.85}.mission .track{background:#ffffff33;margin-top:6px}
+.ana{background:#fff8e1;border:1px solid #f5c26b;border-radius:8px;padding:8px 16px;margin-top:20px}
+.lnk:hover{background:#e8f0fe}
+.compose .btn.light{padding:6px 12px}
