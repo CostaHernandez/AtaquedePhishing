@@ -55,6 +55,10 @@ const status = x => { const s = $('#status'); s.textContent = x; s.style.display
 function renderNav() {
   const n = $('#nav'); n.innerHTML = '';
   const c = el('button', 'compose-btn', '✏ Redactar'); c.onclick = () => openCompose(); n.append(c);
+  // Misión: progreso al reportar los correos de phishing
+  const ph = S.mails.filter(m => m.phish), done = ph.filter(m => m.reported).length;
+  const mi = el('div', 'mission'); mi.append(el('b', null, '🎯 Misión: detecta el phishing'), el('span', null, done + ' de ' + ph.length + ' reportados'));
+  const tr = el('div', 'track'), fl = el('div', 'fill g'); fl.style.width = pc(done, Math.max(ph.length, 1)) + '%'; tr.append(fl); mi.append(tr); n.append(mi);
   FOLDERS.forEach(([id, ic, name]) => {
     const b = el('button', 'f' + (id === cur.folder && !cur.q ? ' on' : '')); b.append(el('span', null, ic), el('span', null, name));
     const cnt = S.mails.filter(m => m.folder === id && !m.read).length;
@@ -94,9 +98,10 @@ function renderMail(m) {
   add('← Volver', () => { cur.open = null; render(); });
   add('🗄 Archivar', () => move(m, 'archive', 'Correo archivado'));
   add('🚫 Spam', () => move(m, 'spam', 'Marcado como spam'));
-  add('🚩 Reportar phishing', () => { S.reports = (S.reports || 0) + 1; move(m, 'spam', m.phish ? '¡Bien hecho! Era phishing y ya está reportado al equipo de seguridad.' : 'Reportado. Este correo era legítimo: revisa las señales antes de reportar.'); });
+  add('🚩 Reportar phishing', () => { S.reports = (S.reports || 0) + 1; m.reported = true; move(m, 'spam', m.phish ? '¡Bien hecho! Era phishing y ya está reportado al equipo de seguridad.' : 'Reportado. Este correo era legítimo: revisa las señales antes de reportar.'); });
   add('🗑 Eliminar', () => { if (m.folder === 'trash') { S.mails = S.mails.filter(x => x !== m); cur.open = null; save(); render(); toast('Eliminado definitivamente'); } else move(m, 'trash', 'Movido a la papelera'); });
   if (m.folder !== 'inbox') add('📥 A recibidos', () => move(m, 'inbox', 'Movido a recibidos'));
+  add('🔍 Analizar', () => ana.classList.toggle('hidden'));
   add('✉ No leído', () => { m.read = false; cur.open = null; save(); render(); });
   main.append(bar);
 
@@ -105,24 +110,24 @@ function renderMail(m) {
   a.append(el('h2', null, m.subject || '(sin asunto)'));
   a.append(el('div', 'meta', (m.folder === 'sent' ? 'Para: ' + m.to : 'De: ' + m.from + ' <' + m.addr + '>') + '  ·  ' + fmt(m.t)));
   const body = el('div', 'mbody');
+  // Todo enlace (de ejemplo, escrito o insertado al redactar) lleva a la lección y nunca sale del sitio
+  const mkLink = (text, url) => { const l = el('a', 'lnk', text); l.href = '#'; l.onmouseover = () => status(url); l.onmouseout = () => status(''); l.onclick = e => { e.preventDefault(); trap(m, text, url); }; return l; };
   m.body.split('[[LINK]]').forEach((p, i, arr) => {
-    body.append(document.createTextNode(p));
-    if (i < arr.length - 1 && m.link) {            // enlace de demostración: nunca sale del sitio
-      const l = el('a', 'lnk', m.link.text); l.href = '#';
-      l.onmouseover = () => status(m.link.url);     // simula la barra de estado del navegador
-      l.onmouseout = () => status('');
-      l.onclick = e => { e.preventDefault(); trap(m); };
-      body.append(l);
-    }
+    let last = 0;
+    for (const x of p.matchAll(LINK_RE)) { body.append(document.createTextNode(p.slice(last, x.index)), mkLink(x[1] || x[3], x[2] || x[3])); last = x.index + x[0].length; }
+    body.append(document.createTextNode(p.slice(last)));
+    if (i < arr.length - 1 && m.link) body.append(mkLink(m.link.text, m.link.url));
   });
   a.append(body);
+  const ana = el('div', 'ana hidden'), ul = el('ul'); ana.append(el('b', null, '🔍 Análisis de seguridad'), ul);
+  analyze(m).forEach(x => ul.append(el('li', null, x))); a.append(ana);
   if (m.att.length) {
     const box = el('div', 'atts');
-    m.att.forEach(f => { const b = el('button', 'att', '📎 ' + f.n + ' (' + kb(f.s) + ')'); b.onclick = () => m.trapAtt ? trap(m) : toast('Adjunto simulado: no se abre ni se ejecuta.'); box.append(b); });
+    m.att.forEach(f => { const b = el('button', 'att', '📎 ' + f.n + ' (' + kb(f.s) + ')'); b.onclick = () => m.trapAtt ? trap(m, f.n, null) : toast('Adjunto simulado: no se abre ni se ejecuta.'); box.append(b); });
     a.append(box);
   }
   const rep = el('button', 'btn', '↩ Responder'); rep.style.marginTop = '24px';
-  rep.onclick = () => openCompose({ to: m.addr, subject: 'Re: ' + m.subject, body: '\n\n--- ' + m.from + ' escribió ---\n' + m.body.replace('[[LINK]]', '[enlace]') });
+  rep.onclick = () => openCompose({ to: m.addr, subject: 'Re: ' + m.subject, body: '\n\n--- ' + m.from + ' escribió ---\n' + m.body.replace('[[LINK]]', m.link ? '[' + m.link.text + '](' + m.link.url + ')' : '') });
   a.append(rep); main.append(a);
 }
 function move(m, f, msg) { m.folder = f; cur.open = null; save(); render(); toast(msg); }
@@ -155,8 +160,31 @@ $('#cSend').onclick = () => {
   toast('Enviado (simulado): no salió de tu navegador.');
 };
 
+$('#cLink').onclick = () => {
+  const url = (prompt('Dirección del enlace (simulado; llevará a la lección):', 'https://') || '').replace(/\s+/g, '');
+  if (!url) return;
+  const text = prompt('Texto visible del enlace:', url) || url, ta = $('#msg');
+  ta.value = ta.value.slice(0, ta.selectionStart) + (text === url ? url : '[' + text + '](' + url + ')') + ta.value.slice(ta.selectionEnd); ta.focus();
+};
+
 // ---------- Trampa de phishing → página educativa interna ----------
-function trap(m) { trapMail = m; S.clicks++; save(); location.hash = '#caiste'; }
+let trapInfo = null;
+const LINK_RE = /\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s]+|www\.[^\s]+)/g;   // [texto](url) o URL suelta
+const linksIn = t => [...t.matchAll(LINK_RE)].map(x => ({ text: x[1] || x[3], url: x[2] || x[3] }));
+function trap(m, text, url) { trapInfo = { m, text, url }; S.clicks++; save(); location.hash = '#caiste'; }
+// Detecta señales de phishing en cualquier correo (también los que redactas)
+function analyze(m) {
+  const r = [], t = ((m.subject || '') + ' ' + m.body).toLowerCase();
+  if (m.addr && m.folder !== 'sent' && !m.addr.endsWith('@cybershield.example')) r.push('Remitente externo: ' + m.addr + ' no es del dominio cybershield.example.');
+  if (/urgente|24 horas|suspend|caduca|hoy mismo|inmediat|perder/.test(t)) r.push('Lenguaje de urgencia o amenaza para presionarte.');
+  if (/premio|ganaste|ganador|bono|gratis/.test(t)) r.push('Promesa de dinero o premio inesperado.');
+  if (/estimado cliente|querido usuario/.test(t)) r.push('Saludo genérico en lugar de tu nombre.');
+  if (m.link) r.push('El enlace dice «' + m.link.text + '» pero lleva a ' + m.link.url + '.');
+  linksIn(m.body).forEach(l => { if (l.text !== l.url) r.push('El texto «' + l.text + '» oculta el destino real ' + l.url + '.'); });
+  (m.att || []).forEach(a => { if (/\.(pdf|docx?|xlsx?|jpe?g)\.(exe|js|scr|bat)$/i.test(a.n)) r.push('Adjunto «' + a.n + '» con doble extensión: es un ejecutable.'); });
+  if (!r.length) r.push('No hay señales evidentes, pero verifica siempre el dominio real antes de hacer clic.');
+  return r;
+}
 function route() {
   const on = location.hash === '#caiste';
   $('#edu').classList.toggle('hidden', !on); $('#app').classList.toggle('hidden', on);
@@ -164,12 +192,12 @@ function route() {
 }
 function fillEdu() {
   const w = $('#eduWhat'), f = $('#eduFlags'); w.innerHTML = f.innerHTML = '';
-  if (!trapMail) { w.textContent = 'Abriste un enlace de demostración. En un ataque real, este paso podría haber robado tus datos.'; return; }
-  const m = trapMail;
-  w.append(el('p', null, m.link ? 'Hiciste clic en «' + m.link.text + '» dentro del correo «' + m.subject + '». El enlace parecía legítimo, pero en realidad apuntaba a: ' + m.link.url
-    : 'Abriste el adjunto «' + m.att[0].n + '» del correo «' + m.subject + '». En un ataque real, habría instalado un programa malicioso.'));
-  w.append(el('p', null, 'Remitente: ' + m.from + ' <' + m.addr + '>. Señales que lo delataban:'));
-  m.flags.forEach(x => f.append(el('li', null, x)));
+  if (!trapInfo) { w.textContent = 'Abriste un enlace de demostración. En un ataque real podrías haber perdido tus datos.'; return; }
+  const { m, text, url } = trapInfo;
+  w.append(el('p', null, url ? 'Hiciste clic en «' + text + '» dentro del correo «' + (m.subject || '(sin asunto)') + '». Parecía legítimo, pero apuntaba a: ' + url
+    : 'Abriste el adjunto «' + text + '» del correo «' + m.subject + '». En un ataque real habría instalado un programa malicioso.'));
+  w.append(el('p', null, 'Remitente: ' + m.from + ' <' + m.addr + '>. Señales detectadas:'));
+  (m.flags && m.flags.length ? m.flags : analyze(m)).forEach(x => f.append(el('li', null, x)));
 }
 $('#backMail').onclick = e => { e.preventDefault(); location.hash = ''; };
 
