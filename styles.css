@@ -1,4 +1,4 @@
-/* ===== Variables y base (inspirado en Gmail) ===== */
+/* ===== Variables y base (inspirado en Gmail) ==== */
 :root{--red:#c5221f;--blue:#1a73e8;--sel:#d3e3fd;--bg:#f6f8fc;--line:#e3e6ea;--tx:#202124;--mut:#5f6368}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.5 "Segoe UI",Roboto,Arial,sans-serif;color:var(--tx);background:var(--bg)}
