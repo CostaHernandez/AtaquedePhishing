@@ -1,5 +1,5 @@
 'use strict';
-/* ====================================================================
+/* =====================================================================
    CorreoSeguro · Simulador educativo anti-phishing
    - Todo ocurre en el navegador. No hay red, formularios de login ni envíos.
    - Los textos se insertan con textContent (nunca innerHTML con datos).
