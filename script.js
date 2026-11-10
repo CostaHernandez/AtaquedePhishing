@@ -9,13 +9,35 @@
 // ---------- Utilidades ----------
 const $ = s => document.querySelector(s);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
-const H = 36e5, KEY = 'cybershield_v2';
+const H = 36e5, KEY = 'cybershield_v3';
 const fmt = t => new Date(t).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const kb = n => Math.max(1, Math.round(n / 1024)) + ' KB';
 const FOLDERS = [['inbox','📥','Recibidos'],['sent','📤','Enviados'],['drafts','📝','Borradores'],['spam','🚫','Spam'],['trash','🗑️','Papelera'],['archive','🗄️','Archivados']];
 
 // ---------- Datos de ejemplo ("[[LINK]]" marca dónde va el enlace) ----------
-const seed = () => [
+// Correos adicionales basados en el escenario de CyberShield S.A. (todos ficticios)
+const extraMails = () => [
+ { id:'m9', folder:'inbox', from:'Recursos Humanos', addr:'rrhh@cybershield-ejemplo.local', subject:'Actualización obligatoria de información laboral', t:Date.now()-0.5*H, read:false, att:[], phish:true, link:null,
+   body:'Estimado colaborador:\n\nEl departamento de Recursos Humanos de CyberShield S.A. informa que se está realizando una actualización de los registros internos de los empleados.\n\nPara completar el procedimiento, revise su información laboral en el siguiente enlace:\n\nhttps://ejemplo.local/actualizacion\n\nAgradecemos su colaboración.\n\nAtentamente,\nDepartamento de Recursos Humanos\nCyberShield S.A.',
+   flags:['Dominio «cybershield-ejemplo.local» distinto del oficial (cybershield.example).','Suplanta a Recursos Humanos, un departamento de autoridad conocido.','Saludo genérico y lenguaje muy formal para aparentar legitimidad.','Pide actuar sin verificar el mensaje por otro canal.'] },
+ { id:'m10', folder:'inbox', from:'Soporte TI', addr:'soporte@cybershield-vpn.example', subject:'Su acceso VPN vence hoy: renueve ahora', t:Date.now()-3*H, read:false, att:[], phish:true,
+   body:'Su acceso remoto a la VPN corporativa vence hoy. Renueve para no perder la conexión:\n\n[[LINK]]\n\nSoporte TI',
+   link:{ text:'Renovar acceso VPN', url:'http://vpn-cybershield.example/renovar' },
+   flags:['TI real nunca renueva accesos mediante enlaces por correo.','Urgencia: «vence hoy».','Dominio ajeno a cybershield.example.'] },
+ { id:'m11', folder:'inbox', from:'Marcos Rivera (Gerencia General)', addr:'gerencia@cybershield-mail.example', subject:'Transferencia urgente y confidencial', t:Date.now()-7*H, read:false, att:[], phish:true, link:null,
+   body:'Laura, necesito que hagas hoy una transferencia a un proveedor nuevo. Estoy en reunión y no puedo hablar. Confírmame por este medio y te envío los datos. No lo comentes con nadie.',
+   flags:['Suplanta a un directivo (fraude del CEO).','Presión y secreto: «no lo comentes con nadie».','Los pagos requieren doble aprobación: confirma siempre por llamada.'] },
+ { id:'m12', folder:'inbox', from:'Nómina', addr:'nomina@cybershield-pagos.example', subject:'Constancia salarial 2026', t:Date.now()-12*H, read:false, trapAtt:true, phish:true, link:null,
+   att:[{ n:'Constancia_Salarial.docm', s:96000 }],
+   body:'Abra el adjunto y pulse «Habilitar contenido» para ver su constancia salarial.',
+   flags:['Pide habilitar macros: vector clásico de malware.','Documento .docm (con macros) no solicitado.','Dominio de pagos ajeno a CyberShield.'] },
+ { id:'m13', folder:'inbox', from:'Recursos Humanos', addr:'rrhh@cybershield.example', subject:'Calendario de vacaciones 2027', t:Date.now()-20*H, read:true, att:[], phish:false, link:null,
+   body:'Hola equipo,\n\nYa está disponible el calendario de vacaciones 2027 en la intranet. Entra escribiendo la dirección de la intranet en tu navegador; este mensaje no incluye enlaces ni te pedirá datos.\n\nSaludos,\nRecursos Humanos' },
+ { id:'m14', folder:'inbox', from:'Seguridad de la Información', addr:'seguridad@cybershield.example', subject:'Boletín: cómo reportar un correo sospechoso', t:Date.now()-40*H, read:true, att:[], phish:false, link:null,
+   body:'Si dudas de un correo, no hagas clic: verifica el remitente en el Directorio y usa el botón «Reportar phishing».\n\nEquipo de Seguridad' }
+];
+
+const seed = () => [ ...extraMails(),
  { id:'m1', folder:'inbox', from:'Banco Nacional', addr:'seguridad@banco-nacional-verifica.example', subject:'⚠ Su cuenta será suspendida en 24 horas', t:Date.now()-2*H, read:false, att:[], phish:true,
    body:'Estimado cliente:\n\nHemos detectado actividad inusual en su cuenta. Para evitar la suspensión debe verificar sus datos en las próximas 24 horas:\n\n[[LINK]]\n\nAtentamente,\nDepartamento de Seguridad',
    link:{ text:'Verificar mi cuenta ahora', url:'http://banco-nacional.verifica-cliente.example/login' },
@@ -66,10 +88,12 @@ function renderNav() {
     b.onclick = () => { cur.folder = id; cur.open = null; cur.q = ''; $('#search').value = ''; n.classList.remove('open'); render(); };
     n.append(b);
   });
-  n.append(el('div', 'sep', 'Seguridad'));
-  const d = el('button', 'f' + (cur.folder === 'dash' && !cur.q ? ' on' : '')); d.append(el('span', null, '📊'), el('span', null, 'Panel de evaluación'));
-  d.onclick = () => { cur.folder = 'dash'; cur.open = null; cur.q = ''; $('#search').value = ''; n.classList.remove('open'); render(); };
-  n.append(d);
+  n.append(el('div', 'sep', 'CyberShield S.A.'));
+  [['dash', '📊', 'Panel de evaluación'], ['dir', '🏢', 'Directorio y política']].forEach(([id, ic, name]) => {
+    const d = el('button', 'f' + (cur.folder === id && !cur.q ? ' on' : '')); d.append(el('span', null, ic), el('span', null, name));
+    d.onclick = () => { cur.folder = id; cur.open = null; cur.q = ''; $('#search').value = ''; n.classList.remove('open'); render(); };
+    n.append(d);
+  });
 }
 
 // ---------- Lista de correos ----------
@@ -131,7 +155,7 @@ function renderMail(m) {
   a.append(rep); main.append(a);
 }
 function move(m, f, msg) { m.folder = f; cur.open = null; save(); render(); toast(msg); }
-function render() { renderNav(); if (cur.folder === 'dash' && !cur.q) return renderDash(); const m = cur.open && S.mails.find(x => x.id === cur.open); m ? renderMail(m) : renderList(); }
+function render() { renderNav(); if (!cur.q && VIEWS[cur.folder]) return VIEWS[cur.folder](); const m = cur.open && S.mails.find(x => x.id === cur.open); m ? renderMail(m) : renderList(); }
 
 // ---------- Redactar (todo simulado) ----------
 function openCompose(d = {}) {
@@ -176,12 +200,12 @@ function trap(m, text, url) { trapInfo = { m, text, url }; S.clicks++; save(); l
 function analyze(m) {
   const r = [], t = ((m.subject || '') + ' ' + m.body).toLowerCase();
   if (m.addr && m.folder !== 'sent' && !m.addr.endsWith('@cybershield.example')) r.push('Remitente externo: ' + m.addr + ' no es del dominio cybershield.example.');
-  if (/urgente|24 horas|suspend|caduca|hoy mismo|inmediat|perder/.test(t)) r.push('Lenguaje de urgencia o amenaza para presionarte.');
+  if (/urgente|24 horas|suspend|caduca|hoy mismo|inmediat|perder|obligatori|confidencial|vence/.test(t)) r.push('Lenguaje de urgencia o amenaza para presionarte.');
   if (/premio|ganaste|ganador|bono|gratis/.test(t)) r.push('Promesa de dinero o premio inesperado.');
   if (/estimado cliente|querido usuario/.test(t)) r.push('Saludo genérico en lugar de tu nombre.');
   if (m.link) r.push('El enlace dice «' + m.link.text + '» pero lleva a ' + m.link.url + '.');
-  linksIn(m.body).forEach(l => { if (l.text !== l.url) r.push('El texto «' + l.text + '» oculta el destino real ' + l.url + '.'); });
-  (m.att || []).forEach(a => { if (/\.(pdf|docx?|xlsx?|jpe?g)\.(exe|js|scr|bat)$/i.test(a.n)) r.push('Adjunto «' + a.n + '» con doble extensión: es un ejecutable.'); });
+  linksIn(m.body).forEach(l => { if (l.text !== l.url) r.push('El texto «' + l.text + '» oculta el destino real ' + l.url + '.'); else if (!/cybershield\.example/.test(l.url)) r.push('Enlace a ' + l.url + ': el dominio no es cybershield.example.'); });
+  (m.att || []).forEach(a => { if (/\.(pdf|docx?|xlsx?|jpe?g)\.(exe|js|scr|bat)$|\.(docm|xlsm|exe|js|scr|bat)$/i.test(a.n)) r.push('Adjunto «' + a.n + '» ejecutable, con doble extensión o con macros: no lo abras.'); });
   if (!r.length) r.push('No hay señales evidentes, pero verifica siempre el dominio real antes de hacer clic.');
   return r;
 }
@@ -268,9 +292,36 @@ function renderDash() {
     proj.textContent = 'Tasa de clic proyectada: ' + Math.round(c * 100) + '% · Cuentas comprometidas proyectadas: ' + (c * i * 100).toFixed(1) + '% de empleados (base sin controles: ' + (pc(T[1], T[0]) * .6).toFixed(1) + '%).';
   }
   upd();
+  const ex = el('button', 'btn', '⬇ Descargar informe (.md)'); ex.style.marginTop = '12px';
+  ex.onclick = () => {
+    const sel = CONTROLS.filter((c, x) => boxes[x].checked).map(c => '- ' + c[0]);
+    const md = ['# Informe de simulación de phishing · CyberShield S.A.', '', 'Escenario: «Actualización obligatoria de información laboral» (datos ficticios).', '',
+      '## Resultados', '- Empleados evaluados: ' + T[0], '- Tasa de clic: ' + pc(T[1], T[0]) + '%', '- Tasa de reporte: ' + pc(T[2], T[0]) + '%', '',
+      '## Por departamento', ...CAMPAIGN.map(d => '- ' + d[0] + ': clic ' + pc(d[2], d[1]) + '%, reporte ' + pc(d[3], d[1]) + '%'), '',
+      '## Mitigaciones seleccionadas', ...(sel.length ? sel : ['- (ninguna)']), '', '## Proyección', proj.textContent, '',
+      '## Recomendaciones', '- Mantener simulacros y capacitación periódicos.', '- Activar MFA resistente a phishing y SPF/DKIM/DMARC.', '- Reforzar el canal de reporte y medir el tiempo de respuesta.'].join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' })); a.download = 'informe-phishing-cybershield.md'; a.click(); URL.revokeObjectURL(a.href);
+  };
+  w.append(ex);
   w.append(el('h3', null, 'Tu sesión'), el('p', null, 'Clics en trampas: ' + S.clicks + ' · Correos reportados: ' + (S.reports || 0) + ' · Mejor puntuación del cuestionario: ' + (S.best == null ? '—' : S.best + '/' + QUIZ.length)));
   main.append(w);
 }
+
+// ---------- Directorio y política (para verificar remitentes legítimos) ----------
+const DIRECTORY = [['Recursos Humanos','rrhh@cybershield.example','Nunca pide datos laborales mediante enlaces.'],['Tecnología (TI)','ti@cybershield.example','Nunca pide contraseñas ni códigos MFA.'],['Seguridad de la Información','seguridad@cybershield.example','Recibe los reportes de correos sospechosos.'],['Finanzas','finanzas@cybershield.example','Pagos con doble aprobación y llamada de confirmación.'],['Gerencia General','gerencia@cybershield.example','No ordena transferencias por correo.']];
+function renderDir() {
+  const main = $('#main'); main.innerHTML = '';
+  const w = el('div', 'dash');
+  w.append(el('h2', null, 'Directorio y política de seguridad · CyberShield S.A.'), el('p', 'mut', 'Dominio oficial: cybershield.example. Cualquier otro dominio, aunque se parezca, es sospechoso.'));
+  const t = el('table', 'tbl'), hr = el('tr');
+  ['Área', 'Dirección oficial', 'Regla'].forEach(x => hr.append(el('th', null, x))); t.append(hr);
+  DIRECTORY.forEach(r => { const tr = el('tr'); r.forEach(x => tr.append(el('td', null, x))); t.append(tr); });
+  w.append(t, el('h3', null, 'Qué hacer ante un correo sospechoso'));
+  const ol = el('ol');
+  ['No hagas clic ni abras adjuntos.', 'Compara el remitente con este directorio y usa 🔍 Analizar.', 'Confirma por otro canal (llamada o presencial).', 'Repórtalo con 🚩 o escribe a seguridad@cybershield.example.', 'Si ya hiciste clic: cambia tu contraseña y avisa de inmediato.'].forEach(x => ol.append(el('li', null, x)));
+  w.append(ol); main.append(w);
+}
+const VIEWS = { dash: () => renderDash(), dir: () => renderDir() };
 
 // ---------- Inicio ----------
 S = load();
