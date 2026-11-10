@@ -4,9 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CyberShield Mail · Simulación anti-phishing</title>
+  <meta name="description" content="Simulador educativo de phishing para CyberShield S.A. (empresa ficticia). No envía ni recopila datos.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<noscript>Esta simulación necesita JavaScript activado.</noscript>
 <!-- ============ APLICACIÓN DE CORREO ============ -->
 <div id="app">
   <header class="top">
@@ -60,6 +63,19 @@
       <li>Activa la verificación en dos pasos y usa un gestor de contraseñas.</li>
       <li>No abras adjuntos inesperados; confirma por otro canal con el remitente.</li>
       <li>Mantén actualizado el sistema y reporta los correos sospechosos.</li></ul></article>
+    <article class="card"><h2>Técnicas de manipulación usadas</h2><ul>
+      <li><b>Autoridad:</b> suplanta a RR. HH., TI o la Gerencia.</li>
+      <li><b>Urgencia y miedo:</b> «vence hoy», «cuenta suspendida».</li>
+      <li><b>Rutina y familiaridad:</b> trámites administrativos creíbles.</li>
+      <li><b>Recompensa y curiosidad:</b> bonos, premios, constancias.</li>
+      <li><b>Cooperación:</b> «agradecemos su colaboración» baja la guardia.</li></ul></article>
+    <article class="card"><h2>Mecanismos de defensa</h2><p><b>Técnicos</b></p><ul>
+      <li>SPF, DKIM y DMARC para frenar la suplantación de dominio.</li>
+      <li>Filtro antispam, sandbox de adjuntos y reescritura de enlaces.</li>
+      <li>MFA resistente a phishing y filtrado DNS.</li></ul><p><b>Organizacionales</b></p><ul>
+      <li>Capacitación y simulacros periódicos; canal único de reporte.</li>
+      <li>Política: RR. HH. y TI nunca piden datos por enlace.</li>
+      <li>Doble aprobación y llamada de confirmación en pagos.</li></ul></article>
     <article class="card warn"><h2>Qué hacer si ya hiciste clic</h2><ul>
       <li>Cierra la página y no introduzcas ni envíes datos.</li>
       <li>Si los escribiste: cambia tu contraseña ya y en todo sitio donde la repitas.</li>
@@ -67,6 +83,7 @@
       <li>Ejecuta un antivirus si descargaste algo y reporta el correo como phishing.</li></ul></article>
     <article class="card wide"><h2>Cuestionario</h2><div id="quiz"></div><div id="result"></div></article>
     <p class="center"><a class="btn" href="#" id="backMail">Volver a la bandeja de entrada</a></p>
+    <p class="center mut">Proyecto académico · CyberShield S.A. es una empresa ficticia. Nada se envía ni se recopila.</p>
   </div>
 </section>
 
